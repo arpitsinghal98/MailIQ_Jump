@@ -63,10 +63,15 @@ export const loader: LoaderFunction = async ({ request }) => {
               for (const email of recentEmails) {
                 // Check if email already exists
                 const existingEmail = await db.query.emails.findFirst({
-                  where: eq(emails.gmailId, email.id!),
+                  where: and(
+                    eq(emails.subject, email.subject),
+                    eq(emails.from, email.from),
+                    eq(emails.gmailId, email.id!)
+                  ),
                 });
 
                 if (existingEmail) {
+                  console.log(`📧 Skipping duplicate email: ${email.subject}`);
                   continue;
                 }
 
