@@ -91,7 +91,7 @@ async function processCategorySync(userId: number, categoryId: number | undefine
         continue;
       }
       console.log(`\nCounting emails for ${account.email}...`);
-      const recentEmails = await fetchRecentEmails(account.accessToken, account.refreshToken, 5);
+      const recentEmails = await fetchRecentEmails(account.accessToken, account.refreshToken, 50);
       totalEmails += recentEmails.length;
       console.log(`Found ${recentEmails.length} emails`);
     }
@@ -108,7 +108,7 @@ async function processCategorySync(userId: number, categoryId: number | undefine
 
       console.log(`\n🔄 Processing account: ${account.email}`);
       const gmail = getGmailClient(account.accessToken, account.refreshToken);
-      const recentEmails = await fetchRecentEmails(account.accessToken, account.refreshToken, 5);
+      const recentEmails = await fetchRecentEmails(account.accessToken, account.refreshToken, 50);
 
       for (const email of recentEmails) {
         try {

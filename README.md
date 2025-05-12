@@ -1,158 +1,142 @@
-# MailIQ – AI-powered Gmail Email Sorter & Dashboard
+# MailIQ - Intelligent Email Management System
 
-MailIQ is a full-stack Remix application that connects to your Gmail account, fetches your emails, and uses AI to automatically categorize, summarize, and manage them. You can link multiple Gmail accounts, bulk delete or unsubscribe, and even auto-process new emails.
+MailIQ is a powerful email management application that helps users organize, categorize, and manage their Gmail accounts efficiently. It provides intelligent email categorization, real-time synchronization, and advanced email management features.
 
----
+## Features
 
-## 🌟 Features
+### Email Management
+- **Gmail Integration**: Seamless integration with Gmail accounts
+- **Real-time Sync**: Automatic synchronization of emails with Gmail
+- **Email Categorization**: Create custom categories to organize emails
+- **Email Actions**:
+  - Move emails between categories
+  - Delete emails
+  - Unsubscribe from mailing lists
+  - Download attachments
+  - View full email content
 
-- Google OAuth login
-- Link multiple Gmail accounts to one user
-- Create custom categories for sorting emails
-- Auto-categorize and summarize new emails using AI
-- View categorized emails with summaries
-- Bulk delete emails
-- Bulk unsubscribe from marketing emails using AI & Playwright
-- Fetch new emails in real-time
-- Fully styled UI using TailwindCSS and responsive components
+### User Interface
+- **Three-Panel Layout**:
+  - Categories panel
+  - Emails list panel
+  - Email details panel
+- **Responsive Design**: Adjustable panel widths
+- **Modern UI**: Built with React and Tailwind CSS
+- **Real-time Updates**: Live email synchronization
 
----
+### Security
+- **OAuth2 Authentication**: Secure Gmail account integration
+- **Token Management**: Secure handling of access and refresh tokens
+- **Session Management**: Secure user sessions
 
-## 🧠 Tech Stack
+## Technical Stack
 
-- **Frontend:** React + Remix v2 + Vite
-- **Backend:** Node.js + Remix loaders/actions
-- **Database:** PostgreSQL (via NeonDB) + Drizzle ORM
-- **Auth:** Google OAuth 2.0 (plus session cookie auth)
-- **Gmail API:** For listing, archiving, deleting emails
-- **AI:** OpenAI API (for categorizing and summarizing)
-- **Automation:** Playwright (for auto-unsubscribe actions)
-- **Deployment:** Vercel
+### Frontend
+- React
+- Remix
+- Tailwind CSS
+- TypeScript
+- React Hot Toast for notifications
 
----
+### Backend
+- Node.js
+- Remix
+- Drizzle ORM
+- PostgreSQL (Neon Serverless)
+- Google APIs
 
-## 🚀 Getting Started
+### Authentication
+- Google OAuth2
+- Session-based authentication
 
-### 1. Clone the repository
+### Database Schema
+- Users
+- Categories
+- Emails
+- Linked Accounts
+- Sync Jobs
 
-```bash
-git clone https://github.com/yourusername/mailiq.git
-cd mailiq
-```
+## Setup Instructions
 
-### 2. Install dependencies
+1. **Prerequisites**
+   - Node.js >= 20.0.0
+   - PostgreSQL database
+   - Google Cloud Platform account with Gmail API enabled
 
-```bash
-npm install
-```
+2. **Environment Variables**
+   Create a `.env` file with the following variables:
+   ```
+   DATABASE_URL=your_postgresql_url
+   GOOGLE_CLIENT_ID=your_google_client_id
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   ```
 
-### 3. Setup .env
+3. **Installation**
+   ```bash
+   npm install
+   ```
 
-Create a `.env` file in the root:
+4. **Database Setup**
+   ```bash
+   npm run db:migrate
+   ```
 
-```bash
-# Gmail + Google OAuth
-GOOGLE_CLIENT_ID=your_client_id
-GOOGLE_CLIENT_SECRET=your_client_secret
-GOOGLE_REDIRECT_URI=https://domain/auth/google/callback
+5. **Development**
+   ```bash
+   npm run dev
+   ```
 
-# OpenAI
-OPENAI_API_KEY=your_openai_key
+6. **Build**
+   ```bash
+   npm run build
+   ```
 
-# DB connection
-DATABASE_URL=your_neondb_connection_url
+## API Endpoints
 
-# Session secret
-SESSION_SECRET=somerandomsecret
-```
+### Authentication
+- `/auth/google` - Google OAuth login
+- `/auth/google/callback` - Google OAuth callback
+- `/auth/gmail/callback` - Gmail integration callback
 
-### 4. Setup your Google project
+### Email Management
+- `/api/emails` - Get emails
+- `/api/emails/sync` - Sync emails
+- `/api/emails/stream` - Stream email updates
+- `/api/fetch-full-email` - Get full email content
+- `/api/gmail-webhook` - Gmail push notifications
 
-- Go to https://console.cloud.google.com/
-- Create a new project
-- Enable Gmail API
-- Create OAuth credentials (for web client)
-- Add http://localhost:5173 or public url as redirect URIs
+### Dashboard Actions
+- `/dashboard/add-category` - Create new category
+- `/dashboard/update-category` - Update category
+- `/dashboard/delete-category` - Delete category
+- `/dashboard/move-emails` - Move emails between categories
+- `/dashboard/delete-emails` - Delete emails
+- `/dashboard/sync-emails` - Trigger email sync
+- `/dashboard/unsubscribe-emails` - Unsubscribe from mailing lists
 
-### 6. Start dev server
+## Development
 
-```bash
-npm run dev
-```
+### Available Scripts
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run test` - Run tests
+- `npm run lint` - Run linter
+- `npm run typecheck` - Check TypeScript types
 
----
+### Testing
+- Jest for unit testing
+- Playwright for end-to-end testing
+- MSW for API mocking
 
-## 🧪 How Unsubscribe Works
+## Contributing
 
-- Uses Playwright to open the unsubscribe link
-- Blocks images/media/fonts to speed up load
-- Searches for checkboxes, buttons like "Unsubscribe", "Submit", "Stop"
-- Clicks the right action and waits for confirmation
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
----
+## License
 
-
-## 📄 Scripts
-
-```bash
-npm run dev          # Start dev server with Remix + Vite
-npm run build        # Build for production
-npm run start        # Start in production
-```
-
----
-
-## 🔐 OAuth Scopes
-
-Your Gmail app will request:
-
-- `https://mail.google.com/`
-- `https://www.googleapis.com/auth/gmail.readonly`
-- `https://www.googleapis.com/auth/gmail.modify`
-- `https://www.googleapis.com/auth/gmail.labels`
-- `profile`
-- `email`
-
-Add test users to your Google Cloud OAuth consent screen.
-
----
-
-## ⚙️ Architecture
-
-- `/app/routes`: Remix routes and actions
-- `/app/utils`: Core logic (AI, Gmail, unsubscribe)
-- `/app/db`: Drizzle schema and NeonDB client
-- `/app/components`: React UI components
-- `/app/styles`: Tailwind and scrollbar CSS
-
----
-
-## 🧼 Cleanup
-
-- All deletions remove from both DB and Gmail
-- When unlinking Gmail, all related labels/emails are cleaned
-
----
-
-## ❓ FAQ
-
-**Q: Can I support multiple Gmail accounts per user?**  
-Yes, already built-in.
-
----
-
-## 📤 Deployment
-
-You can deploy to Fly.io, Render, or any Node-compatible host.
-
----
-
-## 👨‍💻 Author
-
-Built by [Arpit Singhal](https://www.arpitsinghal.me)
-
----
-
-## 📜 License
-
-MIT
+This project is licensed under the MIT License.
