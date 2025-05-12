@@ -69,6 +69,9 @@ MailIQ is a powerful email management application that helps users organize, cat
    DATABASE_URL=your_postgresql_url
    GOOGLE_CLIENT_ID=your_google_client_id
    GOOGLE_CLIENT_SECRET=your_google_client_secret
+   GOOGLE_REDIRECT_URI=http://yourdomain/auth/google/callback
+   SESSION_SECRET=random_string
+   GEMINI_API_KEY=your_gemini_api_key
    ```
 
 3. **Installation**
