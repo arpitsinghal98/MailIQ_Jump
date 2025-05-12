@@ -80,7 +80,6 @@ function findAttachmentsInParts(parts: GmailPart[]): {
 }
 
 export async function fetchRecentEmails(accessToken: string, refreshToken: string, maxResults: number = 10) {
-  
   const gmail = getGmailClient(accessToken, refreshToken);
 
   const res = await gmail.users.messages.list({
@@ -89,10 +88,8 @@ export async function fetchRecentEmails(accessToken: string, refreshToken: strin
     maxResults,
   });
 
-
   const emails = await Promise.all(
     (res.data.messages ?? []).map(async (msg) => {
-      
       const full = await gmail.users.messages.get({
         userId: "me",
         id: msg.id!,
@@ -109,12 +106,8 @@ export async function fetchRecentEmails(accessToken: string, refreshToken: strin
       let htmlContent = "";
       try {
         const htmlEncoded = extractHtmlFromPayload(payload as GmailPart);
-        
         if (htmlEncoded) {
           htmlContent = Buffer.from(htmlEncoded, "base64").toString("utf8");
-
-        } else {
-          console.warn("⚠️ No HTML content found");
         }
       } catch (error) {
         console.error("❌ Error extracting HTML:", error);
@@ -159,8 +152,6 @@ export async function fetchSingleEmailById(
       const htmlEncoded = extractHtmlFromPayload(payload as GmailPart);
       if (htmlEncoded) {
         htmlContent = Buffer.from(htmlEncoded, "base64").toString("utf8");
-      } else {
-        console.warn("⚠️ No HTML content found");
       }
     } catch (error) {
       console.error("❌ Error extracting HTML:", error);
@@ -175,9 +166,6 @@ export async function fetchSingleEmailById(
 
     // Extract attachments
     const attachments = payload?.parts ? findAttachmentsInParts(payload.parts) : [];
-
-    // Log the attachments for debugging
-    console.log("📎 Found attachments:", attachments);
 
     return {
       id: full.data.id,
@@ -234,8 +222,6 @@ export async function fetchSingleEmailById(
               const htmlEncoded = extractHtmlFromPayload(payload as GmailPart);
               if (htmlEncoded) {
                 htmlContent = Buffer.from(htmlEncoded, "base64").toString("utf8");
-              } else {
-                console.warn("⚠️ No HTML content found");
               }
             } catch (error) {
               console.error("❌ Error extracting HTML:", error);

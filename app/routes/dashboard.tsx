@@ -1,7 +1,6 @@
 import { useLoaderData, useFetcher, useSearchParams } from "@remix-run/react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { loader } from "~/loaders/dashboardLoader";
-import { useEmailPolling } from "~/hooks/useEmailPolling";
 import ActionBar from "~/components/ActionBar";
 import CategoriesPanel from "~/components/CategoriesPanel";
 import EmailsPanel from "~/components/EmailsPanel";
@@ -56,44 +55,40 @@ export default function Dashboard() {
   const filteredEmails = useMemo(() => {
     return selectedCategoryId
       ? emails
-          .filter((e) => e.categoryId === selectedCategoryId)
-          .map((e) => ({
-            ...e,
-            from: e.from || "",
-            subject: e.subject || "",
-            summary: e.summary || "",
-          }))
+        .filter((e) => e.categoryId === selectedCategoryId)
+        .map((e) => ({
+          ...e,
+          from: e.from || "",
+          subject: e.subject || "",
+          summary: e.summary || "",
+        }))
       : emails
-          .filter((e) => !e.categoryId) // Show uncategorized emails in Inbox
-          .map((e) => ({
-            ...e,
-            from: e.from || "",
-            subject: e.subject || "",
-            summary: e.summary || "",
-          }));
+        .filter((e) => !e.categoryId) // Show uncategorized emails in Inbox
+        .map((e) => ({
+          ...e,
+          from: e.from || "",
+          subject: e.subject || "",
+          summary: e.summary || "",
+        }));
   }, [emails, selectedCategoryId]);
 
-    useEffect(() => {
-  const handler = () => {
-    console.warn("🔥 PAGE REFRESH TRIGGERED");
-  };
-  window.addEventListener("beforeunload", handler);
-  return () => window.removeEventListener("beforeunload", handler);
-}, []);
+  useEffect(() => {
+    const handler = () => {
+      console.warn("🔥 PAGE REFRESH TRIGGERED");
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
 
-useEmailPolling((newEmails) => {
-  setEmails(newEmails);
-}, 30000);
+  useEffect(() => {
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
 
-    useEffect(() => {
-  const beforeUnload = (e: BeforeUnloadEvent) => {
-    e.preventDefault();
-    e.returnValue = "";
-  };
-
-  window.addEventListener("beforeunload", beforeUnload);
-  return () => window.removeEventListener("beforeunload", beforeUnload);
-}, []);
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => window.removeEventListener("beforeunload", beforeUnload);
+  }, []);
 
 
   useEffect(() => {
@@ -151,11 +146,6 @@ useEmailPolling((newEmails) => {
       // Show success toast
       toast.success(`Successfully deleted ${deleted.length} email${deleted.length > 1 ? 's' : ''}`);
 
-      // Optional: update categories if tied to emails (e.g. if emails per category)
-      const usedCategoryIds = new Set(updatedEmails.map((e) => e.categoryId));
-      const updatedCategories = initialCategories.filter((c) => usedCategoryIds.has(c.id));
-      setCategories(updatedCategories);
-
       // Reset selection
       setSelectedEmailIds([]);
       setSelectedEmailId(null);
@@ -169,11 +159,20 @@ useEmailPolling((newEmails) => {
       if (remainingEmailsInCategory.length > 0) {
         const firstEmail = remainingEmailsInCategory[0];
         handleEmailClick(firstEmail.id);
-      } else if (updatedEmails.length === 0) {
+      } else {
         setSelectedCategoryId(null);
       }
     }
   }, [deleteFetcher]);
+  // Update categories whenever emails change
+  useEffect(() => {
+    // Keep all categories but update their email counts
+    const updatedCategories = initialCategories.map(category => ({
+      ...category,
+      emailCount: emails.filter(e => e.categoryId === category.id).length
+    }));
+    setCategories(updatedCategories);
+  }, [emails, initialCategories]);
 
   useEffect(() => {
     if (unsubscribeFetcher.state === "idle" && unsubscribeFetcher.data?.unsubscribedIds) {
@@ -209,88 +208,70 @@ useEmailPolling((newEmails) => {
   // Update emails when new data arrives
   useEffect(() => {
     if (emailsFetcher.data?.emails) {
-      setEmails(emailsFetcher.data.emails);
+      // Only update if there are actual changes
+      const newEmails = emailsFetcher.data.emails;
+      const hasChanges = newEmails.length !== emails.length ||
+        newEmails.some((newEmail, index) => newEmail.id !== emails[index]?.id);
+
+      if (hasChanges) {
+        setEmails(newEmails);
+
+        // If we have a selected email, make sure it's still selected
+        if (selectedEmailId) {
+          const emailStillExists = newEmails.some(e => e.id === selectedEmailId);
+          if (!emailStillExists) {
+            // If the selected email no longer exists, select the first email in the current category
+            const firstEmail = selectedCategoryId
+              ? newEmails.find(e => e.categoryId === selectedCategoryId)
+              : newEmails.find(e => !e.categoryId);
+
+            if (firstEmail) {
+              handleEmailClick(firstEmail.id);
+            } else {
+              setSelectedEmailId(null);
+              setSelectedEmailIds([]);
+              setFullEmail(undefined);
+            }
+          }
+        }
+      }
     }
   }, [emailsFetcher.data]);
 
+  // Set up polling interval for emails
   useEffect(() => {
-    // Skip auto-selection during sync to prevent reload loops
-    if (syncJobId) return;
+    const interval = setInterval(() => {
+      emailsFetcher.load("/api/emails");
+    }, 2000); // Refresh every 2 seconds
 
-    if (selectedCategoryId !== null) {
-      const emailsInCategory = emails.filter(e => e.categoryId === selectedCategoryId);
-      if (emailsInCategory.length > 0) {
-        const firstEmail = emailsInCategory[0];
-        setSelectedEmailId(firstEmail.id);
-        setSelectedEmailIds([firstEmail.id]);
-        // Fetch full email details
-        const account = accounts.find((a) => a.id === firstEmail.linkedAccountId);
-        if (account) {
-          const url = `/api/fetch-full-email?gmailId=${firstEmail.gmailId}&accessToken=${account.accessToken}&refreshToken=${account.refreshToken}`;
-          fetcher.load(url);
-        }
-      } else {
-        setSelectedEmailId(null);
-        setSelectedEmailIds([]);
-      }
-    } else {
-      // Inbox: show first uncategorized email if any
-      const inboxEmails = emails.filter(e => !e.categoryId);
-      if (inboxEmails.length > 0) {
-        const firstEmail = inboxEmails[0];
-        setSelectedEmailId(firstEmail.id);
-        setSelectedEmailIds([firstEmail.id]);
-        const account = accounts.find((a) => a.id === firstEmail.linkedAccountId);
-        if (account) {
-          const url = `/api/fetch-full-email?gmailId=${firstEmail.gmailId}&accessToken=${account.accessToken}&refreshToken=${account.refreshToken}`;
-          fetcher.load(url);
-        }
-      } else {
-        setSelectedEmailId(null);
-        setSelectedEmailIds([]);
-      }
-    }
-  }, [selectedCategoryId, emails, syncJobId]);
-  // Set up SSE listener for new emails
-  // useEffect(() => {
-  //   // Get the highest email ID to use as starting point
-  //   const lastEmailId = Math.max(...emails.map(e => e.id), 0);
-    
-  //   const eventSource = new EventSource(`/api/emails/stream?lastEmailId=${lastEmailId}`);
+    return () => clearInterval(interval);
+  }, []); // Empty dependency array since we want this to run once
 
-  //   eventSource.addEventListener('connected', (event) => {
-  //     console.log('✅ SSE Connected');
-  //   });
+  // Set up SSE connection for status updates
+  useEffect(() => {
+    const lastEmailId = Math.max(...emails.map(e => e.id), 0);
+    const eventSource = new EventSource(`/api/emails/stream?lastEmailId=${lastEmailId}`);
 
-  //   eventSource.addEventListener('error', (event: MessageEvent) => {
-  //     const data = JSON.parse(event.data);
-  //     console.error('❌ SSE Error:', data.error);
-  //     eventSource.close();
-  //   });
+    eventSource.addEventListener('connected', () => {
+      console.log('✅ SSE Connected');
+    });
 
-  //   eventSource.onmessage = (event) => {
-  //     const data = JSON.parse(event.data);
-  //     if (data.emails?.length > 0) {
-  //       setEmails(prevEmails => {
-  //         const newEmails = data.emails.filter(
-  //           (newEmail: typeof emails[0]) => !prevEmails.some(existing => existing.id === newEmail.id)
-  //         );
-  //         return [...newEmails, ...prevEmails];
-  //       });
-  //     }
-  //   };
+    eventSource.addEventListener('error', () => {
+      console.error('❌ SSE Error');
+      eventSource.close();
+    });
 
-  //   return () => {
-  //     eventSource.close();
-  //   };
-  // }, []); // Empty dependency array since we only want to set this up once
+    return () => {
+      eventSource.close();
+    };
+  }, [emails]);
 
   const handleMoveToCategory = (emailIds: number[], targetCategoryId: number | null) => {
     if (isMovingEmails) return; // Prevent multiple moves
     setIsMovingEmails(true);
     setTargetCategoryId(targetCategoryId);
     moveEmailFetcher.submit(
-      { 
+      {
         emailIds: JSON.stringify(emailIds),
         categoryId: targetCategoryId ? targetCategoryId.toString() : null
       },
@@ -303,8 +284,8 @@ useEmailPolling((newEmails) => {
     if (moveEmailFetcher.state === "idle" && moveEmailFetcher.data && !isMovingEmails) {
       if (moveEmailFetcher.data.success) {
         // Update emails in state immediately
-        setEmails(prevEmails => 
-          prevEmails.map(email => 
+        setEmails(prevEmails =>
+          prevEmails.map(email =>
             selectedEmailIds.includes(email.id)
               ? { ...email, categoryId: targetCategoryId }
               : email
@@ -321,10 +302,10 @@ useEmailPolling((newEmails) => {
           setSelectedEmailIds([]);
           setSelectedEmailId(null);
         }
-        
+
         // Show success message
         toast.success(`Successfully moved ${selectedEmailIds.length} email${selectedEmailIds.length > 1 ? 's' : ''}`);
-        
+
         // Clear target
         setTargetCategoryId(null);
       } else if (moveEmailFetcher.data.error) {
@@ -360,10 +341,7 @@ useEmailPolling((newEmails) => {
 
       <div className="flex flex-1 overflow-hidden h-full">
         <CategoriesPanel
-          categories={categories.map(cat => ({
-            ...cat,
-            emailCount: emails.filter(e => e.categoryId === cat.id).length
-          }))}
+           categories={categories}
           selectedCategoryId={selectedCategoryId}
           setSelectedCategoryId={setSelectedCategoryId}
           leftRef={leftRef}

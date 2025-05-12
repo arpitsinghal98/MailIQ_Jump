@@ -2,8 +2,11 @@ import { json } from "@remix-run/node";
 import type { LoaderFunction } from "@remix-run/node";
 import { getSession } from "~/utils/session.server";
 import { db } from "~/db/client";
-import { emails } from "~/db/schema";
+import { emails, linkedAccounts, categories } from "~/db/schema";
 import { eq, gt, and } from "drizzle-orm";
+import { fetchRecentEmails } from "~/lib/fetch-emails";
+import { analyzeEmail } from "~/utils/ai";
+import { getGmailClient } from "~/lib/gmail.server";
 
 export const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request.headers.get("Cookie"));
@@ -36,19 +39,77 @@ export const loader: LoaderFunction = async ({ request }) => {
       };
 
       const checkNewEmails = async () => {
+        console.log("Arpit Stream Checking for new emails");
         try {
-          const newEmails = await db.query.emails.findMany({
-            where: lastEmailId 
-              ? and(
-                  eq(emails.userId, user.id),
-                  gt(emails.id, parseInt(lastEmailId))
-                )
-              : eq(emails.userId, user.id),
-            orderBy: (emails, { desc }) => [desc(emails.receivedAt)],
+          // Get all linked Gmail accounts for the user
+          const accounts = await db.query.linkedAccounts.findMany({
+            where: eq(linkedAccounts.userId, user.id),
           });
 
-          if (newEmails.length > 0) {
-            controller.enqueue(`data: ${JSON.stringify({ emails: newEmails })}\n\n`);
+          const userCategories = await db.query.categories.findMany({
+            where: eq(categories.userId, user.id),
+          });
+
+          for (const account of accounts) {
+            if (!account.accessToken || !account.refreshToken) {
+              console.warn(`⚠️ Skipping ${account.email}: missing tokens`);
+              continue;
+            }
+
+            try {
+              const gmail = getGmailClient(account.accessToken, account.refreshToken);
+              const recentEmails = await fetchRecentEmails(account.accessToken, account.refreshToken, 5);
+
+              for (const email of recentEmails) {
+                // Check if email already exists
+                const existingEmail = await db.query.emails.findFirst({
+                  where: eq(emails.gmailId, email.id!),
+                });
+
+                if (existingEmail) {
+                  continue;
+                }
+
+                // Analyze email with AI
+                const { category: matchedCategoryName, summary, unsubscribeUrl } = await analyzeEmail(
+                  email.html,
+                  userCategories
+                );
+
+                // Save to database
+                const savedEmail = await db.insert(emails).values({
+                  userId: user.id,
+                  linkedAccountId: account.id,
+                  gmailId: email.id!,
+                  subject: email.subject,
+                  from: email.from,
+                  rawHtml: unsubscribeUrl,
+                  summary,
+                  receivedAt: new Date(),
+                  categoryId: matchedCategoryName && matchedCategoryName !== "None" 
+                    ? userCategories.find(c => c.name.toLowerCase().trim() === matchedCategoryName.toLowerCase().trim())?.id 
+                    : null,
+                }).returning();
+
+                // Send the new email to the client
+                controller.enqueue(`event: message\ndata: ${JSON.stringify({ emails: savedEmail })}\n\n`);
+
+                // Archive the email in Gmail
+                try {
+                  await gmail.users.messages.modify({
+                    userId: 'me',
+                    id: email.id!,
+                    requestBody: {
+                      removeLabelIds: ['INBOX']
+                    }
+                  });
+                } catch (archiveError) {
+                  console.error(`❌ Failed to archive email ${email.id}:`, archiveError);
+                }
+              }
+            } catch (error) {
+              console.error(`❌ Error fetching emails for ${account.email}:`, error);
+            }
           }
         } catch (error) {
           console.error("Error checking for new emails:", error);
@@ -59,10 +120,11 @@ export const loader: LoaderFunction = async ({ request }) => {
       // Send initial connection success
       controller.enqueue(`event: connected\ndata: ${JSON.stringify({ status: "connected" })}\n\n`);
 
+      // Initial check for new emails
       await checkNewEmails();
       
       // Set up intervals
-      const emailInterval = setInterval(checkNewEmails, 2000);
+      const emailInterval = setInterval(checkNewEmails, 30000); // Check every 30 seconds
       const heartbeatInterval = setInterval(sendHeartbeat, 30000); // Send heartbeat every 30 seconds
 
       // Clean up on close

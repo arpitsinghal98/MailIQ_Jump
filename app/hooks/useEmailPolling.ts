@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useFetcher } from "@remix-run/react";
 import { emails } from "~/db/schema";
 import type { SerializeFrom } from "@remix-run/node";
@@ -7,9 +7,10 @@ type EmailType = SerializeFrom<typeof emails.$inferSelect> & {
   receivedAt: string | null;
 };
 
+// Increase polling interval to 1 minute to avoid rate limits
+const POLL_INTERVAL = 60000; // 1 minute
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 5000; // 5 seconds
-const POLL_INTERVAL = 30000; // 30 seconds
 
 type FetcherData = {
   emails: EmailType[];
@@ -17,53 +18,61 @@ type FetcherData = {
 };
 
 export function useEmailPolling(
-  onNewEmails: (newEmails: EmailType[]) => void,
-  interval = POLL_INTERVAL
+  onNewEmails: (newEmails: EmailType[]) => void
 ) {
   const fetcher = useFetcher<FetcherData>();
   const lastEmailIds = useRef<Set<string>>(new Set());
-  const retryCount = useRef(0);
-  const isPolling = useRef(true);
+  const retryCount = useRef<number>(0);
+  const isPolling = useRef<boolean>(true);
+  const lastPollTime = useRef<number>(0);
 
-  const poll = useCallback(() => {
-    fetcher.load("/api/emails");
-  }, [fetcher]);
+  const poll = async () => {
+    // Check if enough time has passed since last poll
+    const now = Date.now();
+    if (now - lastPollTime.current < POLL_INTERVAL) {
+      return;
+    }
 
-  // Handle polling errors and retries
-  useEffect(() => {
-    if (fetcher.data?.error) {
+    try {
+      fetcher.load("/api/emails/sync");
+      lastPollTime.current = now;
+      retryCount.current = 0; // Reset retry count on successful poll
+    } catch (error) {
+      console.error("Error polling for emails:", error);
       if (retryCount.current < MAX_RETRIES) {
-        retryCount.current += 1;
-        setTimeout(poll, RETRY_DELAY);
+        retryCount.current++;
+        // Exponential backoff: 5s, 10s, 20s
+        const backoffDelay = RETRY_DELAY * Math.pow(2, retryCount.current - 1);
+        setTimeout(poll, backoffDelay);
       } else {
+        console.error("Max retries reached, stopping polling");
         isPolling.current = false;
       }
-    } else {
-      retryCount.current = 0;
     }
-  }, [fetcher.data?.error, poll]);
+  };
 
-  // Setup polling interval
   useEffect(() => {
-    poll(); // Initial poll
-    const id = setInterval(poll, interval);
-    
-    return () => {
-      isPolling.current = false;
-      clearInterval(id);
-    };
-  }, [interval, poll]);
+    // Initial poll
+    poll();
 
-  // Handle new emails
+    // Set up polling interval
+    const intervalId = setInterval(poll, POLL_INTERVAL);
+
+    return () => {
+      clearInterval(intervalId);
+      isPolling.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     if (fetcher.data?.emails) {
       const newEmails = fetcher.data.emails.filter(
-        email => !lastEmailIds.current.has(email.gmailId)
+        (email) => !lastEmailIds.current.has(email.gmailId)
       );
-      
+
       if (newEmails.length > 0) {
-        onNewEmails(fetcher.data.emails);
-        fetcher.data.emails.forEach(email => {
+        onNewEmails(newEmails);
+        newEmails.forEach((email) => {
           lastEmailIds.current.add(email.gmailId);
         });
       }

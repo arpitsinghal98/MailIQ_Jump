@@ -200,7 +200,7 @@ async function processCategorySync(userId: number, categoryId: number | undefine
               gmailId: email.id!,
               subject: email.subject,
               from: email.from,
-              rawHtml: email.html,
+              rawHtml: '',
               summary: "Error analyzing email",
               receivedAt: new Date(),
             });

@@ -40,3 +40,13 @@ export const linkedAccounts = pgTable("linked_accounts", {
   refreshToken: text("refresh_token").notNull(),
 });
 
+export const syncJobs = pgTable("sync_jobs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  linkedAccountId: integer("linked_account_id").notNull().references(() => linkedAccounts.id),
+  lastSyncAt: timestamp("last_sync_at").notNull().defaultNow(),
+  lastHistoryId: varchar("last_history_id", { length: 255 }),
+  status: varchar("status", { length: 50 }).notNull().default("completed"),
+  error: text("error"),
+});
+
