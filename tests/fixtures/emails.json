@@ -1,0 +1,74 @@
+{
+  "emails": [
+    {
+      "id": 1,
+      "messageId": "msg1@example.com",
+      "subject": "Weekly Tech Newsletter",
+      "from": "newsletter@tech.com",
+      "to": "john@example.com",
+      "date": "2024-01-01T10:00:00Z",
+      "snippet": "Latest tech news and updates...",
+      "categoryId": 1,
+      "userId": 1,
+      "unsubscribeUrl": "https://tech.com/unsubscribe",
+      "createdAt": "2024-01-01T10:00:00Z",
+      "updatedAt": "2024-01-01T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "messageId": "msg2@example.com",
+      "subject": "50% Off Sale!",
+      "from": "marketing@store.com",
+      "to": "john@example.com",
+      "date": "2024-01-02T11:00:00Z",
+      "snippet": "Don't miss our biggest sale of the year...",
+      "categoryId": 2,
+      "userId": 1,
+      "unsubscribeUrl": "https://store.com/unsubscribe",
+      "createdAt": "2024-01-02T11:00:00Z",
+      "updatedAt": "2024-01-02T11:00:00Z"
+    },
+    {
+      "id": 3,
+      "messageId": "msg3@example.com",
+      "subject": "Your account has been updated",
+      "from": "noreply@service.com",
+      "to": "john@example.com",
+      "date": "2024-01-03T12:00:00Z",
+      "snippet": "We've updated your account settings...",
+      "categoryId": 3,
+      "userId": 1,
+      "unsubscribeUrl": null,
+      "createdAt": "2024-01-03T12:00:00Z",
+      "updatedAt": "2024-01-03T12:00:00Z"
+    },
+    {
+      "id": 4,
+      "messageId": "msg4@example.com",
+      "subject": "New connection request",
+      "from": "linkedin@mail.linkedin.com",
+      "to": "jane@example.com",
+      "date": "2024-01-04T13:00:00Z",
+      "snippet": "You have a new connection request...",
+      "categoryId": 4,
+      "userId": 2,
+      "unsubscribeUrl": "https://linkedin.com/email-settings",
+      "createdAt": "2024-01-04T13:00:00Z",
+      "updatedAt": "2024-01-04T13:00:00Z"
+    },
+    {
+      "id": 5,
+      "messageId": "msg5@example.com",
+      "subject": "Project Update Meeting",
+      "from": "manager@company.com",
+      "to": "jane@example.com",
+      "date": "2024-01-05T14:00:00Z",
+      "snippet": "Please join us for the project update meeting...",
+      "categoryId": 5,
+      "userId": 2,
+      "unsubscribeUrl": null,
+      "createdAt": "2024-01-05T14:00:00Z",
+      "updatedAt": "2024-01-05T14:00:00Z"
+    }
+  ]
+}

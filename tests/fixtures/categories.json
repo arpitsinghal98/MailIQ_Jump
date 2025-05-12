@@ -1,0 +1,49 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "name": "Newsletter",
+      "description": "Regular email newsletters and updates",
+      "color": "blue",
+      "userId": 1,
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": 2,
+      "name": "Promotion",
+      "description": "Marketing and promotional emails",
+      "color": "red",
+      "userId": 1,
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": 3,
+      "name": "Notification",
+      "description": "System notifications and alerts",
+      "color": "green",
+      "userId": 1,
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": 4,
+      "name": "Social",
+      "description": "Social media notifications and updates",
+      "color": "purple",
+      "userId": 2,
+      "createdAt": "2024-01-02T00:00:00Z",
+      "updatedAt": "2024-01-02T00:00:00Z"
+    },
+    {
+      "id": 5,
+      "name": "Work",
+      "description": "Work-related communications",
+      "color": "yellow",
+      "userId": 2,
+      "createdAt": "2024-01-02T00:00:00Z",
+      "updatedAt": "2024-01-02T00:00:00Z"
+    }
+  ]
+}
