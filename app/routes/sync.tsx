@@ -57,6 +57,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       });
 
       // Only archive if it matched a category
+      console.log("🔍 Analyzed email:", email.subject, "with category:", matchedCategoryName);
       if (matchedCategoryName && matchedCategoryName !== "None") {
         try {
           await gmail.users.messages.modify({

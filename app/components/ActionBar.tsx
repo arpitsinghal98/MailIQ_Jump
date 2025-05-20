@@ -66,6 +66,7 @@
 // }
 
 import EmailAccountsDropdown from "~/components/EmailAccountsDropdown";
+import { useState } from "react";
 
 export default function ActionBar({
   selectedEmailIds,
@@ -76,6 +77,7 @@ export default function ActionBar({
   onSync,
   categories,
   onMoveToCategory,
+  emails,
 }: {
   selectedEmailIds: number[];
   setShowAddCategoryModal: (show: boolean) => void;
@@ -85,8 +87,10 @@ export default function ActionBar({
   onSync: () => void;
   categories: { id: number; name: string }[];
   onMoveToCategory: (emailIds: number[], categoryId: number | null) => void;
+  emails: { id: number; categoryId: number | null }[];
 }) {
   const hasSelected = selectedEmailIds.length > 0;
+  const [isMoving, setIsMoving] = useState(false);
 
   const handleAddAccountPopup = () => {
     window.open(
@@ -128,22 +132,49 @@ export default function ActionBar({
           <>
             <div className="relative">
               <select
-                onChange={(e) => {
-                  const categoryId = e.target.value === "uncategorised" ? null : parseInt(e.target.value);
-                  onMoveToCategory(selectedEmailIds, categoryId);
+                disabled={isMoving}
+                onChange={async (e) => {
+                  const categoryId = parseInt(e.target.value);
+                  const targetCategory = categories.find(cat => cat.id === categoryId)?.name;
+                  
+                  const confirmed = window.confirm(`Are you sure you want to move ${selectedEmailIds.length} email${selectedEmailIds.length > 1 ? 's' : ''} to ${targetCategory}?`);
+                  
+                  if (confirmed) {
+                    setIsMoving(true);
+                    try {
+                      await onMoveToCategory(selectedEmailIds, categoryId);
+                      // Reset the select value after successful move
+                      e.target.value = "";
+                    } catch (error) {
+                      console.error('Error moving emails:', error);
+                      // Don't show error toast here as it might be a false negative
+                    } finally {
+                      setIsMoving(false);
+                    }
+                  } else {
+                    // Reset the select value if user cancels
+                    e.target.value = "";
+                  }
                 }}
-                className="px-4 py-2 text-sm bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-colors duration-200"
+                className={`px-4 py-2 text-sm bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-colors duration-200 ${isMoving ? 'opacity-50 cursor-not-allowed' : ''}`}
                 defaultValue=""
               >
                 <option value="" disabled>Move to...</option>
-                <option value="uncategorised">📥 Uncategorised</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
+                {categories
+                  .filter(category => {
+                    // Get the first selected email to check its current category
+                    const firstSelectedEmail = selectedEmailIds[0];
+                    const email = emails.find(e => e.id === firstSelectedEmail);
+                    return email?.categoryId !== category.id;
+                  })
+                  .map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
               </select>
             </div>
+
             <button
               onClick={() => {
                 if (!hasSelected) return;

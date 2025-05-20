@@ -99,17 +99,23 @@ export const loader: LoaderFunction = async ({ request }) => {
                 // Send the new email to the client
                 controller.enqueue(`event: message\ndata: ${JSON.stringify({ emails: savedEmail })}\n\n`);
 
-                // Archive the email in Gmail
-                try {
-                  await gmail.users.messages.modify({
-                    userId: 'me',
-                    id: email.id!,
-                    requestBody: {
-                      removeLabelIds: ['INBOX']
-                    }
-                  });
-                } catch (archiveError) {
-                  console.error(`❌ Failed to archive email ${email.id}:`, archiveError);
+                // Only archive if it matched a category
+                console.log("🔍 Analyzed email:", email.subject, "with category:", matchedCategoryName);
+                if (matchedCategoryName && matchedCategoryName !== "None") {
+                  try {
+                    await gmail.users.messages.modify({
+                      userId: 'me',
+                      id: email.id!,
+                      requestBody: {
+                        removeLabelIds: ['INBOX']
+                      }
+                    });
+                    console.log(`✅ Archived email: ${email.id}`);
+                  } catch (archiveError) {
+                    console.error(`❌ Failed to archive email ${email.id}:`, archiveError);
+                  }
+                } else {
+                  console.log(`📥 Saved to Inbox: ${email.subject}`);
                 }
               }
             } catch (error) {

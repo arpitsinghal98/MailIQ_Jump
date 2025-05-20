@@ -3,7 +3,6 @@ import { getSession } from "~/utils/session.server";
 import { db } from "~/db/client";
 import { linkedAccounts } from "~/db/schema";
 import { getGmailClient } from "~/lib/gmail.server";
-import { setupGmailWatch } from "~/utils/gmailWatch";
 import { oauth2Client } from "~/lib/google";
 
 export async function loader({ request }: { request: Request }) {
@@ -38,9 +37,6 @@ export async function loader({ request }: { request: Request }) {
       accessToken: tokens.access_token!,
       refreshToken: tokens.refresh_token!,
     });
-
-    // Set up Gmail watch notifications
-    await setupGmailWatch(tokens.access_token!, tokens.refresh_token!);
 
     return redirect("/dashboard");
   } catch (error) {

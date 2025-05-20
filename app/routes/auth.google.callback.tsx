@@ -5,7 +5,6 @@ import { db } from "~/db/client";
 import { users, linkedAccounts } from "~/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getSession, commitSession } from "~/utils/session.server";
-import { setupGmailWatch } from "~/utils/gmailWatch";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -45,9 +44,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         accessToken: tokens.access_token!,
         refreshToken: tokens.refresh_token!,
       });
-
-      // Set up Gmail watch notifications
-      await setupGmailWatch(tokens.access_token!, tokens.refresh_token!);
     }
 
     if (state === "popup") {
@@ -116,9 +112,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       email: user.email,
     });
 
-    // Set up Gmail watch notifications
-    await setupGmailWatch(tokens.access_token!, tokens.refresh_token!);
-
     if (state === "popup") {
       return new Response(`
         <html><body>
@@ -165,9 +158,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     accessToken: tokens.access_token!,
     refreshToken: tokens.refresh_token!,
   });
-
-  // Set up Gmail watch notifications
-  await setupGmailWatch(tokens.access_token!, tokens.refresh_token!);
 
   session.set("user", {
     id: createdUser.id,

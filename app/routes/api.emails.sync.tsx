@@ -93,18 +93,22 @@ export const loader: LoaderFunction = async ({ request }) => {
         newEmails.push(savedEmail[0]);
         console.log(`✅ Saved email to database: ${email.subject}`);
 
-        // Archive the email in Gmail after processing
-        try {
-          await gmail.users.messages.modify({
-            userId: 'me',
-            id: email.id!,
-            requestBody: {
-              removeLabelIds: ['INBOX']
-            }
-          });
-          console.log(`✅ Archived email: ${email.id}`);
-        } catch (archiveError) {
-          console.error(`❌ Failed to archive email ${email.id}:`, archiveError);
+        // Only archive if it matched a category
+        if (matchedCategoryName && matchedCategoryName !== "None") {
+          try {
+            await gmail.users.messages.modify({
+              userId: 'me',
+              id: email.id!,
+              requestBody: {
+                removeLabelIds: ['INBOX']
+              }
+            });
+            console.log(`✅ Archived email: ${email.id}`);
+          } catch (archiveError) {
+            console.error(`❌ Failed to archive email ${email.id}:`, archiveError);
+          }
+        } else {
+          console.log(`📥 Saved to Inbox: ${email.subject}`);
         }
       }
 

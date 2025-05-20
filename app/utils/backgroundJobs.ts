@@ -187,6 +187,8 @@ async function processCategorySync(userId: number, categoryId: number | undefine
             } catch (err) {
               console.error("⚠️ Failed to archive:", email.subject, err);
             }
+          } else {
+            console.log("📥 Saved to Inbox:", email.subject);
           }
         } catch (error) {
           console.error("⚠️ Error processing email:", email.subject, error);

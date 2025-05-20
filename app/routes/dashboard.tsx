@@ -26,7 +26,6 @@ export default function Dashboard() {
   const [selectedEmailId, setSelectedEmailId] = useState<number | null>(null);
   const [selectedEmailIds, setSelectedEmailIds] = useState<number[]>([]);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
-  const [targetCategoryId, setTargetCategoryId] = useState<number | null>(null);
   const [isMovingEmails, setIsMovingEmails] = useState(false);
   type FullEmail = {
     id: string;
@@ -125,13 +124,6 @@ export default function Dashboard() {
 
     fetcher.load(url);
   };
-
-
-  useEffect(() => {
-    if (categories.length === 0) {
-      setShowAddCategoryModal(true);
-    }
-  }, [categories]);
 
   useEffect(() => {
     restoreWidths(leftRef, middleRef);
@@ -266,55 +258,50 @@ export default function Dashboard() {
     };
   }, [emails]);
 
-  const handleMoveToCategory = (emailIds: number[], targetCategoryId: number | null) => {
+  const handleMoveToCategory = async (emailIds: number[], targetCategoryId: number | null) => {
     if (isMovingEmails) return; // Prevent multiple moves
+    
     setIsMovingEmails(true);
-    setTargetCategoryId(targetCategoryId);
-    moveEmailFetcher.submit(
-      {
-        emailIds: JSON.stringify(emailIds),
-        categoryId: targetCategoryId ? targetCategoryId.toString() : null
-      },
-      { method: "post", action: "/dashboard/move-emails" }
-    );
-  };
+    
+    try {
+      await moveEmailFetcher.submit(
+        {
+          emailIds: JSON.stringify(emailIds),
+          categoryId: targetCategoryId ? targetCategoryId.toString() : null
+        },
+        { method: "post", action: "/dashboard/move-emails" }
+      );
 
-  // Handle move email response
-  useEffect(() => {
-    if (moveEmailFetcher.state === "idle" && moveEmailFetcher.data && !isMovingEmails) {
-      if (moveEmailFetcher.data.success) {
-        // Update emails in state immediately
-        setEmails(prevEmails =>
-          prevEmails.map(email =>
-            selectedEmailIds.includes(email.id)
-              ? { ...email, categoryId: targetCategoryId }
-              : email
-          )
-        );
-
-        // If we're currently viewing the category we moved from, update the selection
-        if (selectedCategoryId === targetCategoryId) {
-          // Keep the selection if we're moving within the same category
-          setSelectedEmailIds([]);
-          setSelectedEmailId(null);
-        } else {
-          // Clear selection if we're moving to a different category
-          setSelectedEmailIds([]);
-          setSelectedEmailId(null);
+      // Update the emails list immediately
+      const updatedEmails = emails.map(email => {
+        if (emailIds.includes(email.id)) {
+          return { ...email, categoryId: targetCategoryId };
         }
-
-        // Show success message
-        toast.success(`Successfully moved ${selectedEmailIds.length} email${selectedEmailIds.length > 1 ? 's' : ''}`);
-
-        // Clear target
-        setTargetCategoryId(null);
-      } else if (moveEmailFetcher.data.error) {
-        toast.error(moveEmailFetcher.data.error);
-        setTargetCategoryId(null);
-      }
+        return email;
+      });
+      setEmails(updatedEmails);
+      
+      // Show success message
+      toast.success(`Successfully moved ${emailIds.length} email${emailIds.length > 1 ? 's' : ''} to ${targetCategoryId ? categories.find(cat => cat.id === targetCategoryId)?.name : 'Uncategorised'}`);
+      
+      // Clear selection
+      setSelectedEmailIds([]);
+      setSelectedEmailId(null);
+    } catch (error) {
+      console.error('Error moving emails:', error);
+      toast.error('An error occurred while moving emails.');
+    } finally {
       setIsMovingEmails(false);
     }
-  }, [moveEmailFetcher, selectedEmailIds, targetCategoryId, isMovingEmails, selectedCategoryId]);
+  };
+
+  // Update data when reload fetcher completes
+  useEffect(() => {
+    if (emailsFetcher.data) {
+      const { emails: newEmails } = emailsFetcher.data;
+      setEmails(newEmails);
+    }
+  }, [emailsFetcher.data]);
 
   return (
     <>
@@ -337,6 +324,7 @@ export default function Dashboard() {
         onSync={handleSync}
         categories={categories}
         onMoveToCategory={handleMoveToCategory}
+        emails={emails}
       />
 
       <div className="flex flex-1 overflow-hidden h-full">
