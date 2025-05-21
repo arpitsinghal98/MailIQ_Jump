@@ -106,7 +106,6 @@ MailIQ is a powerful email management application that helps users organize, cat
 - `/api/emails/sync` - Sync emails
 - `/api/emails/stream` - Stream email updates
 - `/api/fetch-full-email` - Get full email content
-- `/api/gmail-webhook` - Gmail push notifications
 
 ### Dashboard Actions
 - `/dashboard/add-category` - Create new category
