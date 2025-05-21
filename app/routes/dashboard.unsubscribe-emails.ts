@@ -110,6 +110,13 @@ export const action = async ({ request }: { request: Request }) => {
   const results: { id: number; success: boolean; reason?: string }[] = [];
 
   for (const email of selectedEmails) {
+
+    const userId = await db.query.users.findFirst({
+      where: (users, { eq }) => eq(users.id, user.id),
+    });
+
+    console.log("Arpit Singhal: ", userId?.email);
+
     const link = email.rawHtml;
 
     console.log("🔗 Email:", email.subject);
@@ -121,7 +128,7 @@ export const action = async ({ request }: { request: Request }) => {
     }
 
     try {
-      const unsubscribed = await performUnsubscribe(link);
+      const unsubscribed = await performUnsubscribe(link, userId?.email ?? "");
       results.push({
         id: email.id,
         success: !!unsubscribed,

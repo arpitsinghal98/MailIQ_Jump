@@ -20,7 +20,7 @@ You are an AI email assistant acting like a deterministic program.
 You must perform **three tasks** based on the raw HTML content of an email:
 1. Choose the most appropriate category from the list below.
 2. Write a one-line summary describing the main purpose or topic of the email.
-3. If there's an unsubscribe link in the HTML, extract and return the **exact URL**. Otherwise, return null.
+3. If there's a link in the HTML that allows the user to unsubscribe, opt out, manage preferences, update email settings, or stop receiving emails, extract and return the **exact URL**. Otherwise, return null.
 
 ---
 
@@ -28,8 +28,8 @@ RULES:
 - You MUST return the category name exactly as it appears in the "Valid category names" list.
 - DO NOT rephrase, extend, or combine category names with descriptions.
 - The summary must be a short, plain-English sentence — DO NOT copy-paste email text, subject lines, or include special characters.
-- The unsubscribe URL must be the exact href string of the first visible link intended for unsubscribing (if any).
-- If there's no unsubscribe link, return \`null\`.
+- The unsubscribe URL must be the exact href string of the first visible link intended for unsubscribing, opting out, managing preferences, updating email settings, or stopping emails (if any). Look for links with text or href containing phrases like "unsubscribe", "opt out", "manage preferences", "email settings", "stop receiving", or similar.
+- If there's no such link, return \`null\`.
 - Your response must ONLY be a valid JSON object — no extra comments, markdown, or text.
 
 ---
@@ -38,8 +38,8 @@ CATEGORIES:
 ${categories.map((c) => `- ${c.name}: ${c.description}`).join("\n")}
 
 Valid category names (use exactly as-is): [${categories
-    .map((c) => c.name)
-    .join(", ")}]
+      .map((c) => c.name)
+      .join(", ")}]
 
 ---
 
@@ -66,7 +66,7 @@ OUTPUT FORMAT (JSON only):
     const text = res?.candidates?.[0]?.content?.parts?.[0]?.text
       ?.replace(/```json|```/g, "")
       .trim() || "";
-    
+
     if (!text) {
       console.error("Empty AI response");
       return { category: "None", summary: "Failed to analyze email", unsubscribeUrl: null };
