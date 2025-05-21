@@ -21,26 +21,43 @@ export function getGmailClient(accessToken: string, refreshToken: string) {
 
   // Add token refresh handler
   oauth2Client.on('tokens', async (tokens) => {
-    if (tokens.refresh_token) {
-      // Update the refresh token in the database if it changes
-      // You'll need to implement this function
-      await updateRefreshToken(refreshToken, tokens.refresh_token);
+    try {
+      // Update both access and refresh tokens in the database
+      if (tokens.access_token || tokens.refresh_token) {
+        await updateTokens(
+          refreshToken,
+          tokens.access_token || accessToken,
+          tokens.refresh_token || refreshToken
+        );
+      }
+    } catch (error) {
+      console.error('Failed to update tokens:', error);
     }
   });
 
   return google.gmail({ version: "v1", auth: oauth2Client });
 }
 
-// Add this function to update refresh tokens in the database
-async function updateRefreshToken(oldRefreshToken: string, newRefreshToken: string) {
+// Update this function to handle both access and refresh tokens
+async function updateTokens(
+  oldRefreshToken: string,
+  newAccessToken: string,
+  newRefreshToken: string
+) {
   // Update in linkedAccounts table
   await db.update(linkedAccounts)
-    .set({ refreshToken: newRefreshToken })
+    .set({
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken
+    })
     .where(eq(linkedAccounts.refreshToken, oldRefreshToken));
   
   // Update in users table if needed
   await db.update(users)
-    .set({ refreshToken: newRefreshToken })
+    .set({
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken
+    })
     .where(eq(users.refreshToken, oldRefreshToken));
 }
 
