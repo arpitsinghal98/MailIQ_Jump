@@ -1,6 +1,9 @@
 // app/lib/gmail.ts
 import { google } from "googleapis";
 import { gmail_v1 } from "googleapis";
+import { eq } from "drizzle-orm";
+import { db } from "~/db/client";
+import { linkedAccounts, users } from "~/db/schema";
 
 type GmailPart = gmail_v1.Schema$MessagePart;
 
@@ -16,7 +19,29 @@ export function getGmailClient(accessToken: string, refreshToken: string) {
     refresh_token: refreshToken,
   });
 
+  // Add token refresh handler
+  oauth2Client.on('tokens', async (tokens) => {
+    if (tokens.refresh_token) {
+      // Update the refresh token in the database if it changes
+      // You'll need to implement this function
+      await updateRefreshToken(refreshToken, tokens.refresh_token);
+    }
+  });
+
   return google.gmail({ version: "v1", auth: oauth2Client });
+}
+
+// Add this function to update refresh tokens in the database
+async function updateRefreshToken(oldRefreshToken: string, newRefreshToken: string) {
+  // Update in linkedAccounts table
+  await db.update(linkedAccounts)
+    .set({ refreshToken: newRefreshToken })
+    .where(eq(linkedAccounts.refreshToken, oldRefreshToken));
+  
+  // Update in users table if needed
+  await db.update(users)
+    .set({ refreshToken: newRefreshToken })
+    .where(eq(users.refreshToken, oldRefreshToken));
 }
 
 function findAttachmentInParts(parts: GmailPart[], attachmentId: string): GmailPart | null {
